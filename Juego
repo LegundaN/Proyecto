@@ -8,15 +8,58 @@ class Personaje:
         self.salud = salud
         self.poder_de_ataque = poder_de_ataque
         self.defensa = defensa
+        self.turno_defensa = False  # Indicador para saber si el personaje está cubriéndose
+        self.puede_evolucionar = True  # Para saber si puede usar la habilidad de evolucionar
     
-    def atacar(self, otro_personaje):
-        # Calcular el daño que causa el ataque (usando poder_de_ataque y defensa del oponente)
-        dano = self.poder_de_ataque - otro_personaje.defensa
+    def atacar(self, otro_personaje, habilidad):
+        if habilidad == "Piña":
+            dano = self.poder_de_ataque * 1.2 - otro_personaje.defensa  # Piña aumenta el daño en 20%
+            print(f"{self.nombre} usa Piña a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        elif habilidad == "Patada":
+            dano = self.poder_de_ataque * 1.1 - otro_personaje.defensa  # Patada aumenta el daño en 10%
+            print(f"{self.nombre} usa Patada a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        elif habilidad == "Ataque de Energía":
+            dano = self.poder_de_ataque * 1.5 - otro_personaje.defensa  # Ataque de Energía es el más potente
+            print(f"{self.nombre} usa Ataque de Energía a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        
+        # Si el daño es positivo, lo aplicamos
         if dano > 0:
             otro_personaje.salud -= dano
-            print(f"{self.nombre} ataca a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
         else:
-            print(f"{self.nombre} ataca a {otro_personaje.nombre}, pero el ataque es absorbido por su defensa.")
+            print(f"{self.nombre} usa {habilidad} pero el ataque es absorbido por la defensa de {otro_personaje.nombre}.")
+    
+    def defender(self, habilidad):
+        if habilidad == "Cubrirse":
+            # 50% de probabilidad de negar el daño
+            if random.random() <= 0.5:
+                self.turno_defensa = True
+                print(f"{self.nombre} se cubre con éxito, negando el próximo ataque.")
+            else:
+                print(f"{self.nombre} intenta cubrirse, pero no logra evitar el daño.")
+        elif habilidad == "Mejorar":
+            estadistica = random.choice(["salud", "defensa", "poder_de_ataque"])
+            if estadistica == "salud":
+                aumento = random.randint(50, 100)
+                self.salud += aumento
+                print(f"{self.nombre} mejora su salud en {aumento}. Salud actual: {self.salud}.")
+            elif estadistica == "defensa":
+                aumento = random.randint(10, 30)
+                self.defensa += aumento
+                print(f"{self.nombre} mejora su defensa en {aumento}. Defensa actual: {self.defensa}.")
+            elif estadistica == "poder_de_ataque":
+                aumento = random.randint(20, 50)
+                self.poder_de_ataque += aumento
+                print(f"{self.nombre} mejora su poder de ataque en {aumento}. Poder de ataque actual: {self.poder_de_ataque}.")
+    
+    def evolucionar(self):
+        if self.puede_evolucionar:
+            self.salud = self.salud * 1.2
+            self.poder_de_ataque = self.poder_de_ataque * 1.2
+            self.defensa = self.defensa * 1.2
+            self.puede_evolucionar = False
+            print(f"{self.nombre} evoluciona, todas sus estadísticas aumentan un 20%.")
+        else:
+            print(f"{self.nombre} ya no puede evolucionar, solo se puede usar una vez por batalla.")
     
     def esta_vivo(self):
         return self.salud > 0
@@ -24,25 +67,48 @@ class Personaje:
 # Función recursiva para simular la batalla entre dos personajes
 def batalla(personaje1, personaje2):
     # Si ambos personajes están vivos, continúa el combate
-    if personaje1.esta_vivo() and personaje2.esta_vivo():
-        # El primer personaje ataca
-        personaje1.atacar(personaje2)
+    while personaje1.esta_vivo() and personaje2.esta_vivo():
+        # Turno de personaje1
+        print(f"\nTurno de {personaje1.nombre}:")
+        habilidad1 = random.choice(["Piña", "Patada", "Ataque de Energía", "Cubrirse", "Mejorar", "Evolucionar"])
+        if habilidad1 == "Evolucionar" and personaje1.puede_evolucionar:
+            personaje1.evolucionar()
+        elif habilidad1 in ["Piña", "Patada", "Ataque de Energía"]:
+            if personaje2.turno_defensa:
+                print(f"{personaje2.nombre} está cubriéndose, el ataque se niega.")
+                personaje2.turno_defensa = False
+            else:
+                personaje1.atacar(personaje2, habilidad1)
+        else:
+            personaje1.defender(habilidad1)
+        
+        # Comprobar si personaje2 sigue vivo
         if not personaje2.esta_vivo():
             print(f"{personaje2.nombre} ha sido derrotado. {personaje1.nombre} gana la batalla.")
             return
         
         time.sleep(1)  # Pausa de 1 segundo entre turnos
-        
-        # El segundo personaje ataca
-        personaje2.atacar(personaje1)
+
+        # Turno de personaje2
+        print(f"\nTurno de {personaje2.nombre}:")
+        habilidad2 = random.choice(["Piña", "Patada", "Ataque de Energía", "Cubrirse", "Mejorar", "Evolucionar"])
+        if habilidad2 == "Evolucionar" and personaje2.puede_evolucionar:
+            personaje2.evolucionar()
+        elif habilidad2 in ["Piña", "Patada", "Ataque de Energía"]:
+            if personaje1.turno_defensa:
+                print(f"{personaje1.nombre} está cubriéndose, el ataque se niega.")
+                personaje1.turno_defensa = False
+            else:
+                personaje2.atacar(personaje1, habilidad2)
+        else:
+            personaje2.defender(habilidad2)
+
+        # Comprobar si personaje1 sigue vivo
         if not personaje1.esta_vivo():
             print(f"{personaje1.nombre} ha sido derrotado. {personaje2.nombre} gana la batalla.")
             return
         
         time.sleep(1)  # Pausa de 1 segundo entre turnos
-        
-        # Llamada recursiva para continuar la batalla
-        batalla(personaje1, personaje2)
 
 # Crear dos personajes para la batalla
 goku = Personaje("Goku", salud=1000, poder_de_ataque=150, defensa=50)
