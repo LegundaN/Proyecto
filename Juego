@@ -3,24 +3,25 @@ import time
 
 # Definimos la clase Personaje
 class Personaje:
-    def __init__(self, nombre, salud, poder_de_ataque, defensa):
+    def __init__(self, nombre, salud, poder_de_ataque, defensa, ataque_energia):
         self.nombre = nombre
         self.salud = salud
         self.poder_de_ataque = poder_de_ataque
         self.defensa = defensa
         self.turno_defensa = False  # Indicador para saber si el personaje está cubriéndose
         self.puede_evolucionar = True  # Para saber si puede usar la habilidad de evolucionar
+        self.ataque_energia = ataque_energia  # Ataque de energía personalizado
     
     def atacar(self, otro_personaje, habilidad):
         if habilidad == "Piña":
-            dano = self.poder_de_ataque * 1.2 - otro_personaje.defensa  # Piña aumenta el daño en 20%
+            dano = self.poder_de_ataque * 1.1 - otro_personaje.defensa  # Piña aumenta el daño en 10%
             print(f"{self.nombre} usa Piña a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
         elif habilidad == "Patada":
-            dano = self.poder_de_ataque * 1.1 - otro_personaje.defensa  # Patada aumenta el daño en 10%
+            dano = self.poder_de_ataque * 1.05 - otro_personaje.defensa  # Patada aumenta el daño en 5%
             print(f"{self.nombre} usa Patada a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
         elif habilidad == "Ataque de Energía":
-            dano = self.poder_de_ataque * 1.5 - otro_personaje.defensa  # Ataque de Energía es el más potente
-            print(f"{self.nombre} usa Ataque de Energía a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+            dano = self.ataque_energia - otro_personaje.defensa
+            print(f"{self.nombre} usa {self.nombre}'s Ataque de Energía a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
         
         # Si el daño es positivo, lo aplicamos
         if dano > 0:
@@ -30,8 +31,9 @@ class Personaje:
     
     def defender(self, habilidad):
         if habilidad == "Cubrirse":
-            # 50% de probabilidad de negar el daño
-            if random.random() <= 0.5:
+            # Ajuste de probabilidad de defensa basado en la diferencia de poder
+            probabilidad = 0.5 if self.poder_de_ataque <= 250 else 0.6 if self.poder_de_ataque <= 500 else 0.7
+            if random.random() <= probabilidad:
                 self.turno_defensa = True
                 print(f"{self.nombre} se cubre con éxito, negando el próximo ataque.")
             else:
@@ -39,32 +41,32 @@ class Personaje:
         elif habilidad == "Mejorar":
             estadistica = random.choice(["salud", "defensa", "poder_de_ataque"])
             if estadistica == "salud":
-                aumento = random.randint(50, 100)
+                aumento = random.randint(30, 50)  # Menor aumento
                 self.salud += aumento
                 print(f"{self.nombre} mejora su salud en {aumento}. Salud actual: {self.salud}.")
             elif estadistica == "defensa":
-                aumento = random.randint(10, 30)
+                aumento = random.randint(5, 15)  # Menor aumento
                 self.defensa += aumento
                 print(f"{self.nombre} mejora su defensa en {aumento}. Defensa actual: {self.defensa}.")
             elif estadistica == "poder_de_ataque":
-                aumento = random.randint(20, 50)
+                aumento = random.randint(10, 20)  # Menor aumento
                 self.poder_de_ataque += aumento
                 print(f"{self.nombre} mejora su poder de ataque en {aumento}. Poder de ataque actual: {self.poder_de_ataque}.")
     
     def evolucionar(self):
         if self.puede_evolucionar:
-            self.salud = self.salud * 1.2
-            self.poder_de_ataque = self.poder_de_ataque * 1.2
-            self.defensa = self.defensa * 1.2
+            self.salud = self.salud * 1.15
+            self.poder_de_ataque = self.poder_de_ataque * 1.15
+            self.defensa = self.defensa * 1.15
             self.puede_evolucionar = False
-            print(f"{self.nombre} evoluciona, todas sus estadísticas aumentan un 20%.")
+            print(f"{self.nombre} evoluciona, todas sus estadísticas aumentan un 15%.")
         else:
             print(f"{self.nombre} ya no puede evolucionar, solo se puede usar una vez por batalla.")
     
     def esta_vivo(self):
         return self.salud > 0
 
-# Función recursiva para simular la batalla entre dos personajes
+# Función para realizar una batalla entre dos personajes
 def batalla(personaje1, personaje2):
     # Si ambos personajes están vivos, continúa el combate
     while personaje1.esta_vivo() and personaje2.esta_vivo():
@@ -85,7 +87,7 @@ def batalla(personaje1, personaje2):
         # Comprobar si personaje2 sigue vivo
         if not personaje2.esta_vivo():
             print(f"{personaje2.nombre} ha sido derrotado. {personaje1.nombre} gana la batalla.")
-            return
+            return personaje1
         
         time.sleep(1)  # Pausa de 1 segundo entre turnos
 
@@ -106,14 +108,92 @@ def batalla(personaje1, personaje2):
         # Comprobar si personaje1 sigue vivo
         if not personaje1.esta_vivo():
             print(f"{personaje1.nombre} ha sido derrotado. {personaje2.nombre} gana la batalla.")
-            return
+            return personaje2
         
         time.sleep(1)  # Pausa de 1 segundo entre turnos
 
-# Crear dos personajes para la batalla
-goku = Personaje("Goku", salud=1000, poder_de_ataque=150, defensa=50)
-vegeta = Personaje("Vegeta", salud=950, poder_de_ataque=140, defensa=60)
+# Función para realizar el torneo
+def torneo(personajes, cantidad):
+    # Selección de la manera de elegir los participantes
+    print("\n¿Cómo te gustaría elegir a los participantes?")
+    print("1. Elección al azar")
+    print("2. Elección personalizada")
+    opcion = int(input("Selecciona 1 o 2: "))
+    
+    if opcion == 1:
+        # Elección al azar
+        jugadores = random.sample(personajes, cantidad)
+        print(f"\nLos participantes seleccionados al azar son:")
+        for p in jugadores:
+            print(p.nombre)
+    elif opcion == 2:
+        # Elección personalizada
+        jugadores = []
+        print("\nSelecciona a los personajes para el torneo:")
+        for i, p in enumerate(personajes, start=1):
+            print(f"{i}. {p.nombre}")
+        
+        while len(jugadores) < cantidad:
+            seleccion = int(input(f"Selecciona el personaje {len(jugadores)+1} (1-{len(personajes)}): "))
+            if 1 <= seleccion <= len(personajes) and personajes[seleccion-1] not in jugadores:
+                jugadores.append(personajes[seleccion-1])
+                print(f"{personajes[seleccion-1].nombre} ha sido seleccionado.")
+            else:
+                print("Selección no válida o personaje ya seleccionado.")
+    
+    print(f"\n¡El torneo comienza con {cantidad} participantes!")
+    
+    # Rondas del torneo
+    while len(jugadores) > 1:
+        print("\nRonda de batalla:")
+        jugador1 = jugadores.pop(0)
+        jugador2 = jugadores.pop(0)
+        
+        print(f"¡{jugador1.nombre} vs {jugador2.nombre}!")
+        
+        # Esperar a que el jugador inicie la pelea
+        input("Presiona ENTER para iniciar la pelea...")
+        
+        ganador = batalla(jugador1, jugador2)
+        
+        print(f"{ganador.nombre} pasa a la siguiente ronda.\n")
+        jugadores.append(ganador)  # El ganador sigue en el torneo
+        
+        # Pausa entre rondas
+        input("Presiona ENTER para comenzar la siguiente pelea...")
+        
+    # El ganador final
+    print(f"¡El ganador del torneo es {jugadores[0].nombre}!")
 
-# Iniciar la batalla
-print("¡Comienza la batalla!")
-batalla(goku, vegeta)
+# Crear personajes en orden de poder creciente
+personajes = [
+    Personaje("Raditz", salud=350, poder_de_ataque=50, defensa=30, ataque_energia=100),
+    Personaje("Androide 17", salud=500, poder_de_ataque=60, defensa=40, ataque_energia=120),
+    Personaje("Bardock (Super Saiyan)", salud=650, poder_de_ataque=75, defensa=50, ataque_energia=130),
+    Personaje("Vegeta (Super Saiyan 4)", salud=800, poder_de_ataque=90, defensa=60, ataque_energia=160),
+    Personaje("Goku (Super Saiyan 4)", salud=850, poder_de_ataque=95, defensa=65, ataque_energia=170),
+    Personaje("Hit", salud=900, poder_de_ataque=100, defensa=70, ataque_energia=180),
+    Personaje("Majin Buu (Kid Buu)", salud=1200, poder_de_ataque=120, defensa=80, ataque_energia=200),
+    Personaje("Vegeta (Super Saiyan Blue Evolved)", salud=2000, poder_de_ataque=180, defensa=120, ataque_energia=300),
+    Personaje("Frieza (Golden Form)", salud=2200, poder_de_ataque=200, defensa=130, ataque_energia=320),
+    Personaje("Cell (Perfecto)", salud=2500, poder_de_ataque=220, defensa=150, ataque_energia=350),
+    Personaje("Gohan (Místico)", salud=2700, poder_de_ataque=240, defensa=160, ataque_energia=380),
+    Personaje("Trunks (Del Futuro)", salud=2800, poder_de_ataque=250, defensa=170, ataque_energia=400),
+    Personaje("Zeno Sama", salud=10000, poder_de_ataque=700, defensa=350, ataque_energia=900)
+]
+
+# Mensaje de bienvenida antes de seleccionar la cantidad de participantes
+print("¡Bienvenidos al Juego de Dragon Ball Z!\n")
+print("Prepara tus habilidades y personajes para el torneo definitivo.")
+time.sleep(2)
+
+# Seleccionar cantidad de participantes (4, 8 o 16)
+cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
+if cantidad_participantes in [4, 8, 16]:
+    torneo(personajes, cantidad_participantes)
+else:
+    print("Número de participantes no válido. El torneo no puede comenzar.")
+
+
+
+
