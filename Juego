@@ -1,0 +1,53 @@
+import random
+import time
+
+# Definimos la clase Personaje
+class Personaje:
+    def __init__(self, nombre, salud, poder_de_ataque, defensa):
+        self.nombre = nombre
+        self.salud = salud
+        self.poder_de_ataque = poder_de_ataque
+        self.defensa = defensa
+    
+    def atacar(self, otro_personaje):
+        # Calcular el daño que causa el ataque (usando poder_de_ataque y defensa del oponente)
+        dano = self.poder_de_ataque - otro_personaje.defensa
+        if dano > 0:
+            otro_personaje.salud -= dano
+            print(f"{self.nombre} ataca a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        else:
+            print(f"{self.nombre} ataca a {otro_personaje.nombre}, pero el ataque es absorbido por su defensa.")
+    
+    def esta_vivo(self):
+        return self.salud > 0
+
+# Función recursiva para simular la batalla entre dos personajes
+def batalla(personaje1, personaje2):
+    # Si ambos personajes están vivos, continúa el combate
+    if personaje1.esta_vivo() and personaje2.esta_vivo():
+        # El primer personaje ataca
+        personaje1.atacar(personaje2)
+        if not personaje2.esta_vivo():
+            print(f"{personaje2.nombre} ha sido derrotado. {personaje1.nombre} gana la batalla.")
+            return
+        
+        time.sleep(1)  # Pausa de 1 segundo entre turnos
+        
+        # El segundo personaje ataca
+        personaje2.atacar(personaje1)
+        if not personaje1.esta_vivo():
+            print(f"{personaje1.nombre} ha sido derrotado. {personaje2.nombre} gana la batalla.")
+            return
+        
+        time.sleep(1)  # Pausa de 1 segundo entre turnos
+        
+        # Llamada recursiva para continuar la batalla
+        batalla(personaje1, personaje2)
+
+# Crear dos personajes para la batalla
+goku = Personaje("Goku", salud=1000, poder_de_ataque=150, defensa=50)
+vegeta = Personaje("Vegeta", salud=950, poder_de_ataque=140, defensa=60)
+
+# Iniciar la batalla
+print("¡Comienza la batalla!")
+batalla(goku, vegeta)
