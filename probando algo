@@ -1,189 +1,9 @@
-from collections import defaultdict
-import heapq
 import random
 import time
+from collections import defaultdict
+import heapq
 
-print("Selecciona el modo de juego:")
-print("1. Modo Torneo")
-print("2. Modo Aventura")
-modo = int(input("Elige 1 o 2: "))
-
-if modo == 1:
-    cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
-    if cantidad_participantes in [4, 8, 16]:
-        torneo(personajes, cantidad_participantes)
-    else:
-        print("Número de participantes no válido. El torneo no puede comenzar.")
-elif modo == 2:
-    iniciar_modo_aventura()
-
-class Planeta:
-    def __init__(self, nombre, dificultad, beneficios):
-        self.nombre = nombre
-        self.dificultad = dificultad  # 1-5, afecta stats de enemigos
-        self.beneficios = beneficios  # Dictionary con mejoras de stats
-        self.enemigos = []
-        self.completado = False
-
-class ModoAventura:
-    def __init__(self):
-        self.planetas = {}
-        self.grafo = defaultdict(list)
-        self.inicializar_planetas()
-        self.crear_conexiones()
-    
-    def inicializar_planetas(self):
-        # Definimos los planetas con sus características
-        self.planetas = {
-            "Tierra": Planeta("Tierra", 1, {
-                "salud": 50,
-                "poder_de_ataque": 10,
-                "defensa": 5
-            }),
-            "Namek": Planeta("Namek", 2, {
-                "salud": 100,
-                "poder_de_ataque": 20,
-                "defensa": 10,
-                "ataque_energia": 30
-            }),
-            "Vegeta": Planeta("Vegeta", 3, {
-                "salud": 150,
-                "poder_de_ataque": 30,
-                "defensa": 20,
-                "ataque_energia": 50
-            }),
-            "Yardrat": Planeta("Yardrat", 4, {
-                "salud": 200,
-                "poder_de_ataque": 40,
-                "defensa": 30,
-                "ataque_energia": 70
-            }),
-            "Bills": Planeta("Bills", 5, {
-                "salud": 300,
-                "poder_de_ataque": 60,
-                "defensa": 40,
-                "ataque_energia": 100
-            })
-        }
-        
-        # Generar enemigos para cada planeta
-        for planeta in self.planetas.values():
-            self.generar_enemigos(planeta)
-    
-    def generar_enemigos(self, planeta):
-        # Genera 5 enemigos con stats basados en la dificultad del planeta
-        for i in range(5):
-            multiplicador = planeta.dificultad
-            enemigo = Personaje(
-                f"Enemigo {i+1} de {planeta.nombre}",
-                salud=300 * multiplicador,
-                poder_de_ataque=40 * multiplicador,
-                defensa=25 * multiplicador,
-                ataque_energia=80 * multiplicador
-            )
-            planeta.enemigos.append(enemigo)
-    
-    def crear_conexiones(self):
-        # Definir conexiones entre planetas y sus costos (inversamente proporcional a los beneficios)
-        conexiones = [
-            ("Tierra", "Namek", 4),
-            ("Tierra", "Vegeta", 6),
-            ("Namek", "Yardrat", 5),
-            ("Namek", "Bills", 8),
-            ("Vegeta", "Yardrat", 4),
-            ("Vegeta", "Bills", 7),
-            ("Yardrat", "Bills", 3)
-        ]
-        
-        for origen, destino, costo in conexiones:
-            self.grafo[origen].append((destino, costo))
-            self.grafo[destino].append((origen, costo))
-    
-    def dijkstra(self, inicio, objetivo):
-        distancias = {planeta: float('inf') for planeta in self.planetas}
-        distancias[inicio] = 0
-        pq = [(0, inicio)]
-        camino = {planeta: None for planeta in self.planetas}
-        
-        while pq:
-            dist_actual, actual = heapq.heappop(pq)
-            
-            if actual == objetivo:
-                break
-                
-            if dist_actual > distancias[actual]:
-                continue
-                
-            for vecino, peso in self.grafo[actual]:
-                distancia = dist_actual + peso
-                
-                if distancia < distancias[vecino]:
-                    distancias[vecino] = distancia
-                    camino[vecino] = actual
-                    heapq.heappush(pq, (distancia, vecino))
-        
-        return self.reconstruir_camino(camino, inicio, objetivo)
-    
-    def reconstruir_camino(self, camino, inicio, objetivo):
-        ruta = []
-        actual = objetivo
-        
-        while actual is not None:
-            ruta.append(actual)
-            actual = camino[actual]
-        
-        return list(reversed(ruta))
-    
-    def aplicar_beneficios(self, personaje, planeta):
-        for stat, valor in self.planetas[planeta].beneficios.items():
-            if hasattr(personaje, stat):
-                setattr(personaje, stat, getattr(personaje, stat) + valor)
-                print(f"{personaje.nombre} ha mejorado su {stat} en {valor} puntos en el planeta {planeta}!")
-    
-    def iniciar_aventura(self, goku):
-        print("\n¡Bienvenido al Modo Aventura de Dragon Ball!")
-        print("Goku deberá viajar por diferentes planetas, enfrentando enemigos y haciéndose más fuerte.")
-        
-        # Encontrar la mejor ruta usando Dijkstra
-        mejor_ruta = self.dijkstra("Tierra", "Bills")
-        print("\nRuta óptima de planetas:", " -> ".join(mejor_ruta))
-        
-        for planeta_nombre in mejor_ruta:
-            planeta = self.planetas[planeta_nombre]
-            print(f"\n¡Llegando al planeta {planeta_nombre}!")
-            print(f"Nivel de dificultad: {planeta.dificultad}/5")
-            
-            for i, enemigo in enumerate(planeta.enemigos, 1):
-                print(f"\nBatalla {i} en {planeta_nombre}:")
-                print(f"¡{goku.nombre} vs {enemigo.nombre}!")
-                
-                input("Presiona ENTER para comenzar la batalla...")
-                
-                ganador = batalla(goku, enemigo)
-                if ganador != goku:
-                    print(f"\n¡Game Over! {goku.nombre} ha sido derrotado en {planeta_nombre}.")
-                    return False
-                
-                print(f"\n¡Victoria! {goku.nombre} ha derrotado a {enemigo.nombre}")
-            
-            planeta.completado = True
-            self.aplicar_beneficios(goku, planeta_nombre)
-            
-            if planeta_nombre != "Bills":
-                input("\nPresiona ENTER para viajar al siguiente planeta...")
-        
-        print(f"\n¡Felicidades! {goku.nombre} ha completado su aventura por todos los planetas!")
-        return True
-
-def iniciar_modo_aventura():
-    # Crear a Goku con stats base
-    goku = Personaje("Goku", salud=500, poder_de_ataque=70, defensa=45, ataque_energia=150)
-    
-    # Iniciar la aventura
-    aventura = ModoAventura()
-    aventura.iniciar_aventura(goku)
-
-# Clase para el árbol binario
+# Clase para el árbol binario del torneo
 class NodoTorneo:
     def __init__(self, personaje=None):
         self.personaje = personaje
@@ -225,13 +45,13 @@ class ArbolTorneo:
             nodo.ganador = ganador
             return True
         if (nodo.izquierdo and nodo.izquierdo.personaje == ganador) or \
-           (nodo.derecho and nodo.derecho.personaje == ganador):
+        (nodo.derecho and nodo.derecho.personaje == ganador):
             nodo.ganador = ganador
             return True
         return self.actualizar_ganador(nodo.izquierdo, ganador) or \
-               self.actualizar_ganador(nodo.derecho, ganador)
+            self.actualizar_ganador(nodo.derecho, ganador)
 
-# Definimos la clase Personaje
+# Clase Personaje base para todos los luchadores
 class Personaje:
     def __init__(self, nombre, salud, poder_de_ataque, defensa, ataque_energia):
         self.nombre = nombre
@@ -294,6 +114,161 @@ class Personaje:
     def esta_vivo(self):
         return self.salud > 0
 
+# Clase para el modo aventura
+class Planeta:
+    def __init__(self, nombre, dificultad, beneficios):
+        self.nombre = nombre
+        self.dificultad = dificultad  # 1-5, afecta stats de enemigos
+        self.beneficios = beneficios  # Dictionary con mejoras de stats
+        self.enemigos = []
+        self.completado = False
+
+class ModoAventura:
+    def __init__(self):
+        self.planetas = {}
+        self.grafo = defaultdict(list)
+        self.inicializar_planetas()
+        self.crear_conexiones()
+    
+    def inicializar_planetas(self):
+        self.planetas = {
+            "Tierra": Planeta("Tierra", 1, {
+                "salud": 50,
+                "poder_de_ataque": 10,
+                "defensa": 5
+            }),
+            "Namek": Planeta("Namek", 2, {
+                "salud": 100,
+                "poder_de_ataque": 20,
+                "defensa": 10,
+                "ataque_energia": 30
+            }),
+            "Vegeta": Planeta("Vegeta", 3, {
+                "salud": 150,
+                "poder_de_ataque": 30,
+                "defensa": 20,
+                "ataque_energia": 50
+            }),
+            "Yardrat": Planeta("Yardrat", 4, {
+                "salud": 200,
+                "poder_de_ataque": 40,
+                "defensa": 30,
+                "ataque_energia": 70
+            }),
+            "Bills": Planeta("Bills", 5, {
+                "salud": 300,
+                "poder_de_ataque": 60,
+                "defensa": 40,
+                "ataque_energia": 100
+            })
+        }
+        
+        for planeta in self.planetas.values():
+            self.generar_enemigos(planeta)
+    
+    def generar_enemigos(self, planeta):
+        for i in range(5):
+            multiplicador = planeta.dificultad
+            enemigo = Personaje(
+                f"Enemigo {i+1} de {planeta.nombre}",
+                salud=300 * multiplicador,
+                poder_de_ataque=40 * multiplicador,
+                defensa=25 * multiplicador,
+                ataque_energia=80 * multiplicador
+            )
+            planeta.enemigos.append(enemigo)
+    
+    def crear_conexiones(self):
+        conexiones = [
+            ("Tierra", "Namek", 4),
+            ("Tierra", "Vegeta", 6),
+            ("Namek", "Yardrat", 5),
+            ("Namek", "Bills", 8),
+            ("Vegeta", "Yardrat", 4),
+            ("Vegeta", "Bills", 7),
+            ("Yardrat", "Bills", 3)
+        ]
+        
+        for origen, destino, costo in conexiones:
+            self.grafo[origen].append((destino, costo))
+            self.grafo[destino].append((origen, costo))
+    
+    def dijkstra(self, inicio, objetivo):
+        distancias = {planeta: float('inf') for planeta in self.planetas}
+        distancias[inicio] = 0
+        pq = [(0, inicio)]
+        camino = {planeta: None for planeta in self.planetas}
+        
+        while pq:
+            dist_actual, actual = heapq.heappop(pq)
+            
+            if actual == objetivo:
+                break
+                
+            if dist_actual > distancias[actual]:
+                continue
+                
+            for vecino, peso in self.grafo[actual]:
+                distancia = dist_actual + peso
+                
+                if distancia < distancias[vecino]:
+                    distancias[vecino] = distancia
+                    camino[vecino] = actual
+                    heapq.heappush(pq, (distancia, vecino))
+        
+        return self.reconstruir_camino(camino, inicio, objetivo)
+    
+    def reconstruir_camino(self, camino, inicio, objetivo):
+        ruta = []
+        actual = objetivo
+        
+        while actual is not None:
+            ruta.append(actual)
+            actual = camino[actual]
+        
+        return list(reversed(ruta))
+    
+    def aplicar_beneficios(self, personaje, planeta):
+        for stat, valor in self.planetas[planeta].beneficios.items():
+            if hasattr(personaje, stat):
+                setattr(personaje, stat, getattr(personaje, stat) + valor)
+                print(f"{personaje.nombre} ha mejorado su {stat} en {valor} puntos en el planeta {planeta}!")
+    
+    def iniciar_aventura(self, goku):
+        print("\n¡Bienvenido al Modo Aventura de Dragon Ball!")
+        print("Goku deberá viajar por diferentes planetas, enfrentando enemigos y haciéndose más fuerte.")
+        
+        mejor_ruta = self.dijkstra("Tierra", "Bills")
+        print("\nRuta óptima de planetas:", " -> ".join(mejor_ruta))
+        
+        for planeta_nombre in mejor_ruta:
+            planeta = self.planetas[planeta_nombre]
+            print(f"\n¡Llegando al planeta {planeta_nombre}!")
+            print(f"Nivel de dificultad: {planeta.dificultad}/5")
+            
+            for i, enemigo in enumerate(planeta.enemigos, 1):
+                print(f"\nBatalla {i} en {planeta_nombre}:")
+                print(f"¡{goku.nombre} vs {enemigo.nombre}!")
+                
+                input("Presiona ENTER para comenzar la batalla...")
+                
+                ganador = batalla(goku, enemigo)
+                if ganador != goku:
+                    print(f"\n¡Game Over! {goku.nombre} ha sido derrotado en {planeta_nombre}.")
+                    return False
+                
+                print(f"\n¡Victoria! {goku.nombre} ha derrotado a {enemigo.nombre}")
+            
+            planeta.completado = True
+            self.aplicar_beneficios(goku, planeta_nombre)
+            
+            if planeta_nombre != "Bills":
+                input("\nPresiona ENTER para viajar al siguiente planeta...")
+        
+        print(f"\n¡Felicidades! {goku.nombre} ha completado su aventura por todos los planetas!")
+        return True
+
+# Función de batalla que se usa tanto en el torneo como en la aventura
 def batalla(personaje1, personaje2):
     while personaje1.esta_vivo() and personaje2.esta_vivo():
         print(f"\nTurno de {personaje1.nombre}:")
@@ -344,50 +319,16 @@ def torneo(personajes, cantidad):
     print("\n¿Cómo te gustaría elegir a los participantes?")
     print("1. Elección al azar")
     print("2. Elección personalizada")
-    opcion = int(input("Selecciona 1 o 2: "))
-    
-    if opcion == 1:
-        jugadores = random.sample(personajes, cantidad)
-        print(f"\nLos participantes seleccionados al azar son:")
-        for p in jugadores:
-            print(p.nombre)
-    elif opcion == 2:
-        jugadores = []
-        print("\nSelecciona a los personajes para el torneo:")
-        for i, p in enumerate(personajes, start=1):
-            print(f"{i}. {p.nombre}")
-        
-        while len(jugadores) < cantidad:
-            seleccion = int(input(f"Selecciona el personaje {len(jugadores)+1} (1-{len(personajes)}): "))
-            if 1 <= seleccion <= len(personajes) and personajes[seleccion-1] not in jugadores:
-                jugadores.append(personajes[seleccion-1])
-                print(f"{personajes[seleccion-1].nombre} ha sido seleccionado.")
-            else:
-                print("Selección no válida o personaje ya seleccionado.")
-    
-    arbol_torneo.insertar_participantes(jugadores)
-    
-    print(f"\n¡El torneo comienza con {cantidad} participantes!")
-    
-    while len(jugadores) > 1:
-        print("\nRonda de batalla:")
-        jugador1 = jugadores.pop(0)
-        jugador2 = jugadores.pop(0)
-        
-        print(f"¡{jugador1.nombre} vs {jugador2.nombre}!")
-        
-        input("Presiona ENTER para iniciar la pelea...")
-        
-        ganador = batalla(jugador1, jugador2)
-        arbol_torneo.actualizar_ganador(arbol_torneo.raiz, ganador)
-        
-        print(f"{ganador.nombre} pasa a la siguiente ronda.\n")
-        jugadores.append(ganador)
-        
-        input("Presiona ENTER para comenzar la siguiente pelea...")
-    
-    print(f"\n¡El ganador del torneo es {jugadores[0].nombre}!")
 
+def iniciar_modo_aventura():
+    # Crear a Goku con stats base
+    goku = Personaje("Goku", salud=500, poder_de_ataque=70, defensa=45, ataque_energia=150)
+    
+    # Iniciar la aventura
+    aventura = ModoAventura()
+    aventura.iniciar_aventura(goku)
+
+# Lista de personajes disponibles
 personajes = [
     Personaje("Raditz", salud=350, poder_de_ataque=50, defensa=30, ataque_energia=100),
     Personaje("Androide 17", salud=500, poder_de_ataque=60, defensa=40, ataque_energia=120),
@@ -404,12 +345,36 @@ personajes = [
     Personaje("Zeno Sama", salud=10000, poder_de_ataque=700, defensa=350, ataque_energia=900)
 ]
 
-print("¡Bienvenidos al Juego de Dragon Ball Z!\n")
-print("Prepara tus habilidades y personajes para el torneo definitivo.")
-time.sleep(2)
+# Menú principal del juego
+def main():
+    print("¡Bienvenidos al Juego de Dragon Ball Z!\n")
+    print("Prepara tus habilidades y personajes para una aventura épica.")
+    time.sleep(2)
 
-cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
-if cantidad_participantes in [4, 8, 16]:
-    torneo(personajes, cantidad_participantes)
-else:
-    print("Número de participantes no válido. El torneo no puede comenzar.")
+    while True:
+        print("\nSelecciona el modo de juego:")
+        print("1. Modo Torneo")
+        print("2. Modo Aventura")
+        print("3. Salir")
+        
+        try:
+            modo = int(input("Elige una opción (1-3): "))
+            
+            if modo == 1:
+                cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
+                if cantidad_participantes in [4, 8, 16]:
+                    torneo(personajes, cantidad_participantes)
+                else:
+                    print("Número de participantes no válido. El torneo no puede comenzar.")
+            elif modo == 2:
+                iniciar_modo_aventura()
+            elif modo == 3:
+                print("\n¡Gracias por jugar! ¡Hasta la próxima!")
+                break
+            else:
+                print("Opción no válida. Por favor, elige 1, 2 o 3.")
+        except ValueError:
+            print("Por favor, ingresa un número válido.")
+
+if __name__ == "__main__":
+    main()
