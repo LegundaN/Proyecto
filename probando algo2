@@ -203,8 +203,22 @@ def torneo(personajes, cantidad):
     print(f"¡El ganador del torneo es {jugadores[0].nombre}!")
 
 def modo_aventura(goku, personajes):
-    print("\n¡Bienvenido al Modo Aventura con Goku!")
-    print("Goku viajará por 5 planetas enfrentando diferentes desafíos.")
+    print("\n¡Bienvenido al Modo Aventura de Dragon Ball!")
+    print("Goku deberá viajar por diferentes planetas, enfrentando enemigos y haciéndose más fuerte.")
+    
+    print("\nModos de Ruta:")
+    print("1. Ruta Óptima (usando Dijkstra)")
+    print("2. Exploración Libre")
+    
+    while True:
+        try:
+            modo_ruta = int(input("Selecciona el modo de ruta (1-2): "))
+            if modo_ruta in [1, 2]:
+                break
+            else:
+                print("Por favor, selecciona 1 o 2.")
+        except ValueError:
+            print("Por favor, ingresa un número válido.")
     
     # Crear el grafo de planetas
     universo = GrafoAventura()
@@ -245,16 +259,6 @@ def modo_aventura(goku, personajes):
     universo.agregar_conexion("Planeta de Bills", "Planeta Zeno", 5)
     universo.agregar_conexion("Namek", "Planeta de Bills", 3)
     
-    # Calcular la ruta óptima usando Dijkstra
-    distancias, ruta = universo.dijkstra("Tierra")
-    ruta_optima = ruta["Planeta Zeno"]
-    
-    print("\nRuta óptima calculada para maximizar beneficios:")
-    for i, planeta in enumerate(ruta_optima):
-        print(f"{i+1}. {planeta}")
-    
-    input("\nPresiona ENTER para comenzar la aventura...")
-    
     # Guardar stats originales de Goku
     stats_originales = {
         "salud": goku.salud,
@@ -263,19 +267,51 @@ def modo_aventura(goku, personajes):
         "ataque_energia": goku.ataque_energia
     }
     
+    if modo_ruta == 1:
+        # Modo Ruta Óptima (Dijkstra)
+        distancias, ruta = universo.dijkstra("Tierra")
+        ruta_planetas = ruta["Planeta Zeno"]
+        print("\nRuta óptima calculada para maximizar beneficios:")
+        for i, planeta in enumerate(ruta_planetas):
+            print(f"{i+1}. {planeta}")
+    else:
+        # Modo Exploración Libre
+        ruta_planetas = []
+        planetas_disponibles = list(planetas_info.keys())
+        planetas_disponibles.remove("Tierra")  # Comenzamos en la Tierra
+        ruta_planetas.append("Tierra")
+        
+        print("\nComenzarás tu aventura en la Tierra.")
+        for i in range(4):  # 4 elecciones más después de la Tierra
+            print(f"\nPlanetas disponibles para visitar:")
+            for j, planeta in enumerate(planetas_disponibles, 1):
+                print(f"{j}. {planeta} (Dificultad: {planetas_info[planeta]['dificultad']})")
+            
+            while True:
+                try:
+                    eleccion = int(input(f"\nElige tu destino (1-{len(planetas_disponibles)}): "))
+                    if 1 <= eleccion <= len(planetas_disponibles):
+                        planeta_elegido = planetas_disponibles.pop(eleccion - 1)
+                        ruta_planetas.append(planeta_elegido)
+                        break
+                    else:
+                        print("Opción no válida. Intenta de nuevo.")
+                except ValueError:
+                    print("Por favor, ingresa un número válido.")
+    
     # Recorrer cada planeta en la ruta
-    for planeta_nombre in ruta_optima:
+    for planeta_nombre in ruta_planetas:
         planeta = universo.planetas[planeta_nombre]
-        print(f"\n¡Goku ha llegado a {planeta_nombre}!")
-        print(f"Nivel de dificultad del planeta: {planeta.dificultad}")
+        print(f"\n¡Llegando al planeta {planeta_nombre}!")
+        print(f"Nivel de dificultad: {planeta.dificultad}/5")
         
         # Generar enemigos según la dificultad del planeta
         enemigos = []
-        for _ in range(5):  # 5 batallas por planeta
+        for i in range(5):  # 5 batallas por planeta
             enemigo = random.choice(personajes)
             # Ajustar stats del enemigo según la dificultad del planeta
             enemigo_ajustado = Personaje(
-                f"{enemigo.nombre} de {planeta_nombre}",
+                f"Enemigo {i+1} de {planeta_nombre}",
                 salud=enemigo.salud * (1 + planeta.dificultad * 0.1),
                 poder_de_ataque=enemigo.poder_de_ataque * (1 + planeta.dificultad * 0.1),
                 defensa=enemigo.defensa * (1 + planeta.dificultad * 0.1),
@@ -286,7 +322,7 @@ def modo_aventura(goku, personajes):
         # Realizar las 5 batallas
         for i, enemigo in enumerate(enemigos, 1):
             print(f"\nBatalla {i} en {planeta_nombre}:")
-            print(f"Goku vs {enemigo.nombre}")
+            print(f"¡Goku vs {enemigo.nombre}!")
             input("Presiona ENTER para comenzar la batalla...")
             
             ganador = batalla(goku, enemigo)
@@ -338,21 +374,48 @@ personajes = [
     Personaje("Zeno Sama", salud=10000, poder_de_ataque=700, defensa=350, ataque_energia=900)
 ]
 
+
 if __name__ == "__main__":
     print("¡Bienvenidos al Juego de Dragon Ball Z!\n")
     print("1. Modo Torneo")
     print("2. Modo Aventura (Goku)")
-    modo = int(input("Selecciona el modo de juego (1-2): "))
+    
+    while True:
+        try:
+            modo = int(input("Selecciona el modo de juego (1-2): "))
+            if modo in [1, 2]:
+                break
+            else:
+                print("Por favor, selecciona 1 o 2.")
+        except ValueError:
+            print("Por favor, ingresa un número válido.")
     
     if modo == 1:
-        cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
-        if cantidad_participantes in [4, 8, 16]:
-            torneo(personajes, cantidad_participantes)
-        else:
-            print("Número de participantes no válido. El torneo no puede comenzar.")
+        while True:
+            try:
+                cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
+                if cantidad_participantes in [4, 8, 16]:
+                    torneo(personajes, cantidad_participantes)
+                    break
+                else:
+                    print("Por favor, elige 4, 8 o 16 participantes.")
+            except ValueError:
+                print("Por favor, ingresa un número válido.")
+    
     elif modo == 2:
-        # Encontrar a Goku en la lista de personajes
-        goku = next(p for p in personajes if p.nombre == "Goku (Super Saiyan 4)")
-        modo_aventura(goku, personajes)
-    else:
-        print("Modo de juego no válido.")
+        print("\n=== Modo Aventura con Goku ===")
+        print("1. Modo Ruta Óptima (usando Dijkstra)")
+        print("2. Modo Exploración Libre")
+        
+        while True:
+            try:
+                modo_aventura_tipo = int(input("Selecciona el tipo de aventura (1-2): "))
+                if modo_aventura_tipo in [1, 2]:
+                    # Encontrar a Goku en la lista de personajes
+                    goku = next(p for p in personajes if p.nombre == "Goku (Super Saiyan 4)")
+                    modo_aventura(goku, personajes)
+                    break
+                else:
+                    print("Por favor, selecciona 1 o 2.")
+            except ValueError:
+                print("Por favor, ingresa un número válido.")
