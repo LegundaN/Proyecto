@@ -1,0 +1,48 @@
+#Creamos un Arbol binario para implementar el modo de juego Torneo
+
+class NodoTorneo:
+    def __init__(self, personaje=None):
+        self.personaje = personaje
+        self.izquierdo = None
+        self.derecho = None
+        self.ganador = None
+
+class ArbolTorneo:
+    def __init__(self, profundidad):
+        self.raiz = self._crear_arbol_vacio(profundidad)
+        self.nivel_actual = profundidad
+    
+    def _crear_arbol_vacio(self, profundidad):
+        if profundidad == 0:
+            return NodoTorneo()
+        nodo = NodoTorneo()
+        nodo.izquierdo = self._crear_arbol_vacio(profundidad - 1)
+        nodo.derecho = self._crear_arbol_vacio(profundidad - 1)
+        return nodo
+    
+    def _insertar_participantes(self, nodo, participantes, nivel):
+        if nivel == 0 and participantes:
+            nodo.personaje = participantes.pop(0)
+            return
+        if nodo.izquierdo:
+            self._insertar_participantes(nodo.izquierdo, participantes, nivel - 1)
+        if nodo.derecho:
+            self._insertar_participantes(nodo.derecho, participantes, nivel - 1)
+    
+    def insertar_participantes(self, participantes):
+        participantes_copy = participantes.copy()
+        for nivel in range(self.nivel_actual + 1):
+            self._insertar_participantes(self.raiz, participantes_copy, nivel)
+    
+    def actualizar_ganador(self, nodo, ganador):
+        if not nodo:
+            return False
+        if nodo.personaje == ganador:
+            nodo.ganador = ganador
+            return True
+        if (nodo.izquierdo and nodo.izquierdo.personaje == ganador) or \
+        (nodo.derecho and nodo.derecho.personaje == ganador):
+            nodo.ganador = ganador
+            return True
+        return self.actualizar_ganador(nodo.izquierdo, ganador) or \
+            self.actualizar_ganador(nodo.derecho, ganador)
