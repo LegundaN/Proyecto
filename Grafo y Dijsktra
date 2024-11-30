@@ -1,0 +1,168 @@
+# Creamos un grafo para realizar el recorrido entre los planetas dentro del Modo Aventura, en este caso usamos 5 planetas.
+
+class Planeta:
+    def __init__(self, nombre, dificultad, beneficios):
+        self.nombre = nombre
+        self.dificultad = dificultad  # 1-5, afecta stats de enemigos
+        self.beneficios = beneficios  # Dict con mejoras de stats
+        self.enemigos = []
+        self.visitado = False
+        
+class GrafoAventura:
+    def __init__(self):
+        self.planetas = {}
+        self.conexiones = {}
+        
+    def agregar_planeta(self, nombre, dificultad, beneficios):
+        self.planetas[nombre] = Planeta(nombre, dificultad, beneficios)
+        self.conexiones[nombre] = {}
+        
+    def agregar_conexion(self, origen, destino, distancia):
+        self.conexiones[origen][destino] = distancia
+        self.conexiones[destino][origen] = distancia
+
+# Utilizamos el método Dijkstra para que el jugador (Goku) realice el camino más corto para llegar al planeta 5. 
+
+    def dijkstra(self, inicio):
+        distancias = {planeta: float('infinity') for planeta in self.planetas}
+        distancias[inicio] = 0
+        no_visitados = list(self.planetas.keys())
+        camino = {planeta: [] for planeta in self.planetas}
+        camino[inicio] = [inicio]
+        
+        while no_visitados:
+            actual = min(no_visitados, key=lambda x: distancias[x])
+            no_visitados.remove(actual)
+            
+            for vecino, distancia in self.conexiones[actual].items():
+                if distancia + distancias[actual] < distancias[vecino]:
+                    distancias[vecino] = distancia + distancias[actual]
+                    camino[vecino] = camino[actual] + [vecino]
+                    
+        return distancias, camino
+        
+def modo_aventura(goku, personajes, modo_ruta):
+    print("\n¡Bienvenido al Modo Aventura de Dragon Ball!")
+    print("Goku deberá viajar por diferentes planetas, enfrentando enemigos y haciéndose más fuerte.")
+    
+    # Eliminar completamente el bloque while True que pide modo_ruta
+    
+    # Crear el grafo de planetas
+    universo = GrafoAventura()
+    
+    # Definir planetas con su dificultad y beneficios
+    planetas_info = {
+        "Tierra": {
+            "dificultad": 1,
+            "beneficios": {"salud": 100, "poder_de_ataque": 20, "defensa": 10},
+            "enemigos": ["Yamcha", "Maestro Roshi", "Krilin"]
+        },
+        "Namek": {
+            "dificultad": 2,
+            "beneficios": {"salud": 150, "poder_de_ataque": 30, "defensa": 15},
+            "enemigos": ["Piccolo", "Dodoria", "Freezer"]
+        },
+        "Planeta Vegeta": {
+            "dificultad": 3,
+            "beneficios": {"salud": 200, "poder_de_ataque": 40, "defensa": 20},
+            "enemigos": ["Raditz", "Vegeta (Super Saiyan)", "Broly"]
+        },
+        "Planeta de Bills": {
+            "dificultad": 4,
+            "beneficios": {"salud": 250, "poder_de_ataque": 50, "defensa": 25},
+            "enemigos": ["Majin Buu", "Bills", "Whis"]
+        },
+        "Planeta Zeno": {
+            "dificultad": 5,
+            "beneficios": {"salud": 300, "poder_de_ataque": 60, "defensa": 30},
+            "enemigos": ["Hit", "Goku Black", "Jiren"]
+        }
+    }
+    
+    # Agregar planetas al grafo
+    for planeta, info in planetas_info.items():
+        universo.agregar_planeta(planeta, info["dificultad"], info["beneficios"])
+    
+    # Agregar conexiones entre planetas (distancias)
+    universo.agregar_conexion("Tierra", "Namek", 2)
+    universo.agregar_conexion("Tierra", "Planeta Vegeta", 3)
+    universo.agregar_conexion("Namek", "Planeta Vegeta", 2)
+    universo.agregar_conexion("Planeta Vegeta", "Planeta de Bills", 4)
+    universo.agregar_conexion("Planeta de Bills", "Planeta Zeno", 5)
+    universo.agregar_conexion("Namek", "Planeta de Bills", 3)
+    
+    # Guardar stats originales de Goku
+    stats_originales = {
+        "salud": goku.salud,
+        "poder_de_ataque": goku.poder_de_ataque,
+        "defensa": goku.defensa,
+        "ataque_energia": goku.ataque_energia
+    }
+    
+    if modo_ruta == 1:
+        # Modo Ruta Óptima (Dijkstra)
+        distancias, ruta = universo.dijkstra("Tierra")
+        ruta_planetas = ruta["Planeta Zeno"]
+        print("\nRuta óptima calculada para maximizar beneficios:")
+        for i, planeta in enumerate(ruta_planetas):
+            print(f"{i+1}. {planeta}")
+    else:
+        # Modo Exploración Libre
+        ruta_planetas = []
+        planetas_disponibles = list(planetas_info.keys())
+        planetas_disponibles.remove("Tierra")  # Comenzamos en la Tierra
+        ruta_planetas.append("Tierra")
+        
+        print("\nComenzarás tu aventura en la Tierra.")
+        for i in range(4):  # 4 elecciones más después de la Tierra
+            print(f"\nPlanetas disponibles para visitar:")
+            for j, planeta in enumerate(planetas_disponibles, 1):
+                print(f"{j}. {planeta} (Dificultad: {planetas_info[planeta]['dificultad']})")
+            
+            while True:
+                try:
+                    eleccion = int(input(f"\nElige tu destino (1-{len(planetas_disponibles)}): "))
+                    if 1 <= eleccion <= len(planetas_disponibles):
+                        planeta_elegido = planetas_disponibles.pop(eleccion - 1)
+                        ruta_planetas.append(planeta_elegido)
+                        break
+                    else:
+                        print("Opción no válida. Intenta de nuevo.")
+                except ValueError:
+                    print("Por favor, ingresa un número válido.")
+    
+    # Recorrer cada planeta en la ruta
+    for planeta_nombre in ruta_planetas:
+        planeta = universo.planetas[planeta_nombre]
+        print(f"\n¡Llegando al planeta {planeta_nombre}!")
+        print(f"Nivel de dificultad: {planeta.dificultad}/5")
+        
+        # Generar enemigos específicos para cada planeta
+        enemigos = [
+            next(p for p in personajes if p.nombre == nombre)
+            for nombre in planetas_info[planeta_nombre]["enemigos"]
+        ]
+        
+        # Realizar las 3 batallas
+        for i, enemigo in enumerate(enemigos, 1):
+            print(f"\nBatalla {i} en {planeta_nombre}:")
+            print(f"¡Goku vs {enemigo.nombre}!")
+            input("Presiona ENTER para comenzar la batalla...")
+            
+            ganador = batalla(goku, enemigo) #Batalla está definida en la carpeta del código completo
+            if ganador == enemigo:
+                print("\n¡Game Over! Goku ha sido derrotado en su aventura.")
+                return False
+            
+            # Restaurar parte de la salud después de cada batalla
+            goku.salud = min(stats_originales["salud"], goku.salud + 100)
+        
+        # Aplicar beneficios del planeta
+        for stat, valor in planeta.beneficios.items():
+            if stat == "salud":
+                goku.salud += valor
+            elif stat == "poder_de_ataque":
+                goku.poder_de_ataque += valor
+            elif stat == "defensa":
+                goku.defensa += valor
+                
