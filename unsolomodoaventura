@@ -1,0 +1,442 @@
+import random
+import time
+
+# Definimos la clase Personaje
+class Personaje:
+    def __init__(self, nombre, salud, poder_de_ataque, defensa, ataque_energia):
+        self.nombre = nombre
+        self.salud = salud
+        self.poder_de_ataque = poder_de_ataque
+        self.defensa = defensa
+        self.turno_defensa = False  # Indicador para saber si el personaje está cubriéndose
+        self.puede_evolucionar = True  # Para saber si puede usar la habilidad de evolucionar
+        self.ataque_energia = ataque_energia  # Ataque de energía personalizado
+    
+    def atacar(self, otro_personaje, habilidad):
+        if habilidad == "Piña":
+            dano = self.poder_de_ataque * 1.1 - otro_personaje.defensa  # Piña aumenta el daño en 10%
+            print(f"{self.nombre} usa Piña a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        elif habilidad == "Patada":
+            dano = self.poder_de_ataque * 1.05 - otro_personaje.defensa  # Patada aumenta el daño en 5%
+            print(f"{self.nombre} usa Patada a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        elif habilidad == "Ataque de Energía":
+            dano = self.ataque_energia - otro_personaje.defensa
+            print(f"{self.nombre} usa {self.nombre}'s Ataque de Energía a {otro_personaje.nombre} y le causa {dano} puntos de daño.")
+        
+        # Si el daño es positivo, lo aplicamos
+        if dano > 0:
+            otro_personaje.salud -= dano
+        else:
+            print(f"{self.nombre} usa {habilidad} pero el ataque es absorbido por la defensa de {otro_personaje.nombre}.")
+    
+    def defender(self, habilidad):
+        if habilidad == "Cubrirse":
+            # Ajuste de probabilidad de defensa basado en la diferencia de poder
+            probabilidad = 0.5 if self.poder_de_ataque <= 250 else 0.6 if self.poder_de_ataque <= 500 else 0.7
+            if random.random() <= probabilidad:
+                self.turno_defensa = True
+                print(f"{self.nombre} se cubre con éxito, negando el próximo ataque.")
+            else:
+                print(f"{self.nombre} intenta cubrirse, pero no logra evitar el daño.")
+        elif habilidad == "Mejorar":
+            estadistica = random.choice(["salud", "defensa", "poder_de_ataque"])
+            if estadistica == "salud":
+                aumento = random.randint(30, 50)  # Menor aumento
+                self.salud += aumento
+                print(f"{self.nombre} mejora su salud en {aumento}. Salud actual: {self.salud}.")
+            elif estadistica == "defensa":
+                aumento = random.randint(5, 15)  # Menor aumento
+                self.defensa += aumento
+                print(f"{self.nombre} mejora su defensa en {aumento}. Defensa actual: {self.defensa}.")
+            elif estadistica == "poder_de_ataque":
+                aumento = random.randint(10, 20)  # Menor aumento
+                self.poder_de_ataque += aumento
+                print(f"{self.nombre} mejora su poder de ataque en {aumento}. Poder de ataque actual: {self.poder_de_ataque}.")
+    
+    def evolucionar(self):
+        if self.puede_evolucionar:
+            self.salud = self.salud * 1.15
+            self.poder_de_ataque = self.poder_de_ataque * 1.15
+            self.defensa = self.defensa * 1.15
+            self.puede_evolucionar = False
+            print(f"{self.nombre} evoluciona, todas sus estadísticas aumentan un 15%.")
+        else:
+            print(f"{self.nombre} ya no puede evolucionar, solo se puede usar una vez por batalla.")
+    
+    def esta_vivo(self):
+        return self.salud > 0
+
+class Planeta:
+    def __init__(self, nombre, dificultad, beneficios):
+        self.nombre = nombre
+        self.dificultad = dificultad  # 1-5, afecta stats de enemigos
+        self.beneficios = beneficios  # Dict con mejoras de stats
+        self.enemigos = []
+        self.visitado = False
+        
+class GrafoAventura:
+    def __init__(self):
+        self.planetas = {}
+        self.conexiones = {}
+        
+    def agregar_planeta(self, nombre, dificultad, beneficios):
+        self.planetas[nombre] = Planeta(nombre, dificultad, beneficios)
+        self.conexiones[nombre] = {}
+        
+    def agregar_conexion(self, origen, destino, distancia):
+        self.conexiones[origen][destino] = distancia
+        self.conexiones[destino][origen] = distancia
+        
+    def dijkstra(self, inicio):
+        distancias = {planeta: float('infinity') for planeta in self.planetas}
+        distancias[inicio] = 0
+        no_visitados = list(self.planetas.keys())
+        camino = {planeta: [] for planeta in self.planetas}
+        camino[inicio] = [inicio]
+        
+        while no_visitados:
+            actual = min(no_visitados, key=lambda x: distancias[x])
+            no_visitados.remove(actual)
+            
+            for vecino, distancia in self.conexiones[actual].items():
+                if distancia + distancias[actual] < distancias[vecino]:
+                    distancias[vecino] = distancia + distancias[actual]
+                    camino[vecino] = camino[actual] + [vecino]
+                    
+        return distancias, camino
+
+def batalla(personaje1, personaje2):
+    # Si ambos personajes están vivos, continúa el combate
+    while personaje1.esta_vivo() and personaje2.esta_vivo():
+        # Turno de personaje1
+        print(f"\nTurno de {personaje1.nombre}:")
+        habilidad1 = random.choice(["Piña", "Patada", "Ataque de Energía", "Cubrirse", "Mejorar", "Evolucionar"])
+        if habilidad1 == "Evolucionar" and personaje1.puede_evolucionar:
+            personaje1.evolucionar()
+        elif habilidad1 in ["Piña", "Patada", "Ataque de Energía"]:
+            if personaje2.turno_defensa:
+                print(f"{personaje2.nombre} está cubriéndose, el ataque se niega.")
+                personaje2.turno_defensa = False
+            else:
+                personaje1.atacar(personaje2, habilidad1)
+        else:
+            personaje1.defender(habilidad1)
+        
+        # Comprobar si personaje2 sigue vivo
+        if not personaje2.esta_vivo():
+            print(f"{personaje2.nombre} ha sido derrotado. {personaje1.nombre} gana la batalla.")
+            return personaje1
+        
+        time.sleep(1)  # Pausa de 1 segundo entre turnos
+
+        # Turno de personaje2
+        print(f"\nTurno de {personaje2.nombre}:")
+        habilidad2 = random.choice(["Piña", "Patada", "Ataque de Energía", "Cubrirse", "Mejorar", "Evolucionar"])
+        if habilidad2 == "Evolucionar" and personaje2.puede_evolucionar:
+            personaje2.evolucionar()
+        elif habilidad2 in ["Piña", "Patada", "Ataque de Energía"]:
+            if personaje1.turno_defensa:
+                print(f"{personaje1.nombre} está cubriéndose, el ataque se niega.")
+                personaje1.turno_defensa = False
+            else:
+                personaje2.atacar(personaje1, habilidad2)
+        else:
+            personaje2.defender(habilidad2)
+
+        # Comprobar si personaje1 sigue vivo
+        if not personaje1.esta_vivo():
+            print(f"{personaje1.nombre} ha sido derrotado. {personaje2.nombre} gana la batalla.")
+            return personaje2
+        
+        time.sleep(1)  # Pausa de 1 segundo entre turnos
+
+def torneo(personajes, cantidad):
+    # Selección de la manera de elegir los participantes
+    print("\n¿Cómo te gustaría elegir a los participantes?")
+    print("1. Elección al azar")
+    print("2. Elección personalizada")
+    opcion = int(input("Selecciona 1 o 2: "))
+    
+    if opcion == 1:
+        # Elección al azar
+        jugadores = random.sample(personajes, cantidad)
+        print(f"\nLos participantes seleccionados al azar son:")
+        for p in jugadores:
+            print(p.nombre)
+    elif opcion == 2:
+        # Elección personalizada
+        jugadores = []
+        print("\nSelecciona a los personajes para el torneo:")
+        for i, p in enumerate(personajes, start=1):
+            print(f"{i}. {p.nombre}")
+        
+        while len(jugadores) < cantidad:
+            seleccion = int(input(f"Selecciona el personaje {len(jugadores)+1} (1-{len(personajes)}): "))
+            if 1 <= seleccion <= len(personajes) and personajes[seleccion-1] not in jugadores:
+                jugadores.append(personajes[seleccion-1])
+                print(f"{personajes[seleccion-1].nombre} ha sido seleccionado.")
+            else:
+                print("Selección no válida o personaje ya seleccionado.")
+    
+    print(f"\n¡El torneo comienza con {cantidad} participantes!")
+    
+    # Rondas del torneo
+    while len(jugadores) > 1:
+        print("\nRonda de batalla:")
+        jugador1 = jugadores.pop(0)
+        jugador2 = jugadores.pop(0)
+        
+        print(f"¡{jugador1.nombre} vs {jugador2.nombre}!")
+        
+        # Esperar a que el jugador inicie la pelea
+        input("Presiona ENTER para iniciar la pelea...")
+        
+        ganador = batalla(jugador1, jugador2)
+        
+        print(f"{ganador.nombre} pasa a la siguiente ronda.\n")
+        jugadores.append(ganador)  # El ganador sigue en el torneo
+        
+        # Pausa entre rondas
+        input("Presiona ENTER para comenzar la siguiente pelea...")
+        
+    # El ganador final
+    print(f"¡El ganador del torneo es {jugadores[0].nombre}!")
+
+def ajustar_dificultad_enemigos(personajes, factor_ajuste=0.6):
+    """
+    Ajusta la dificultad de los enemigos para balancear el juego.
+    
+    :param personajes: Lista de personajes originales
+    :param factor_ajuste: Factor para reducir la dificultad (0.6 = reducir a 60%)
+    :return: Nueva lista de personajes con stats ajustadas
+    """
+    personajes_ajustados = []
+    for personaje in personajes:
+        personaje_ajustado = Personaje(
+            personaje.nombre,
+            salud=max(100, int(personaje.salud * factor_ajuste)),
+            poder_de_ataque=max(10, int(personaje.poder_de_ataque * factor_ajuste)),
+            defensa=max(5, int(personaje.defensa * factor_ajuste)),
+            ataque_energia=max(50, int(personaje.ataque_energia * factor_ajuste))
+        )
+        personajes_ajustados.append(personaje_ajustado)
+    return personajes_ajustados
+
+def modo_aventura(goku, personajes, modo_ruta):
+    print("\n¡Bienvenido al Modo Aventura de Dragon Ball!")
+    print("Goku deberá viajar por diferentes planetas, enfrentando enemigos y haciéndose más fuerte.")
+    
+    # Eliminar completamente el bloque while True que pide modo_ruta
+    
+    # Crear el grafo de planetas
+    universo = GrafoAventura()
+    
+    # Definir planetas con su dificultad y beneficios
+    planetas_info = {
+        "Tierra": {
+            "dificultad": 1,
+            "beneficios": {"salud": 100, "poder_de_ataque": 20, "defensa": 10},
+            "enemigos": ["Yamcha", "Maestro Roshi", "Krilin"]
+        },
+        "Namek": {
+            "dificultad": 2,
+            "beneficios": {"salud": 150, "poder_de_ataque": 30, "defensa": 15},
+            "enemigos": ["Piccolo", "Dodoria", "Freezer"]
+        },
+        "Planeta Vegeta": {
+            "dificultad": 3,
+            "beneficios": {"salud": 200, "poder_de_ataque": 40, "defensa": 20},
+            "enemigos": ["Raditz", "Vegeta (Super Saiyan 4)", "Broly"]
+        },
+        "Planeta de Bills": {
+            "dificultad": 4,
+            "beneficios": {"salud": 250, "poder_de_ataque": 50, "defensa": 25},
+            "enemigos": ["Majin Buu", "Bills", "Whis"]
+        },
+        "Planeta Zeno": {
+            "dificultad": 5,
+            "beneficios": {"salud": 300, "poder_de_ataque": 60, "defensa": 30},
+            "enemigos": ["Hit", "Goku Black", "Jiren"]
+        }
+    }
+    
+    # Agregar planetas al grafo
+    for planeta, info in planetas_info.items():
+        universo.agregar_planeta(planeta, info["dificultad"], info["beneficios"])
+    
+    # Agregar conexiones entre planetas (distancias)
+    universo.agregar_conexion("Tierra", "Namek", 2)
+    universo.agregar_conexion("Tierra", "Planeta Vegeta", 3)
+    universo.agregar_conexion("Namek", "Planeta Vegeta", 2)
+    universo.agregar_conexion("Planeta Vegeta", "Planeta de Bills", 4)
+    universo.agregar_conexion("Planeta de Bills", "Planeta Zeno", 5)
+    universo.agregar_conexion("Namek", "Planeta de Bills", 3)
+    
+    # Guardar stats originales de Goku
+    stats_originales = {
+        "salud": goku.salud,
+        "poder_de_ataque": goku.poder_de_ataque,
+        "defensa": goku.defensa,
+        "ataque_energia": goku.ataque_energia
+    }
+    
+    if modo_ruta == 1:
+        # Modo Ruta Óptima (Dijkstra)
+        distancias, ruta = universo.dijkstra("Tierra")
+        ruta_planetas = ruta["Planeta Zeno"]
+        print("\nRuta óptima calculada para maximizar beneficios:")
+        for i, planeta in enumerate(ruta_planetas):
+            print(f"{i+1}. {planeta}")
+    else:
+        # Modo Exploración Libre
+        ruta_planetas = []
+        planetas_disponibles = list(planetas_info.keys())
+        planetas_disponibles.remove("Tierra")  # Comenzamos en la Tierra
+        ruta_planetas.append("Tierra")
+        
+        print("\nComenzarás tu aventura en la Tierra.")
+        for i in range(4):  # 4 elecciones más después de la Tierra
+            print(f"\nPlanetas disponibles para visitar:")
+            for j, planeta in enumerate(planetas_disponibles, 1):
+                print(f"{j}. {planeta} (Dificultad: {planetas_info[planeta]['dificultad']})")
+            
+            while True:
+                try:
+                    eleccion = int(input(f"\nElige tu destino (1-{len(planetas_disponibles)}): "))
+                    if 1 <= eleccion <= len(planetas_disponibles):
+                        planeta_elegido = planetas_disponibles.pop(eleccion - 1)
+                        ruta_planetas.append(planeta_elegido)
+                        break
+                    else:
+                        print("Opción no válida. Intenta de nuevo.")
+                except ValueError:
+                    print("Por favor, ingresa un número válido.")
+    
+    # Recorrer cada planeta en la ruta
+    for planeta_nombre in ruta_planetas:
+        planeta = universo.planetas[planeta_nombre]
+        print(f"\n¡Llegando al planeta {planeta_nombre}!")
+        print(f"Nivel de dificultad: {planeta.dificultad}/5")
+        
+        # Generar enemigos específicos para cada planeta
+        enemigos = [
+            next(p for p in personajes if p.nombre == nombre)
+            for nombre in planetas_info[planeta_nombre]["enemigos"]
+        ]
+        
+        # Realizar las 3 batallas
+        for i, enemigo in enumerate(enemigos, 1):
+            print(f"\nBatalla {i} en {planeta_nombre}:")
+            print(f"¡Goku vs {enemigo.nombre}!")
+            input("Presiona ENTER para comenzar la batalla...")
+            
+            ganador = batalla(goku, enemigo)
+            if ganador == enemigo:
+                print("\n¡Game Over! Goku ha sido derrotado en su aventura.")
+                return False
+            
+            # Restaurar parte de la salud después de cada batalla
+            goku.salud = min(stats_originales["salud"], goku.salud + 100)
+        
+        # Aplicar beneficios del planeta
+        for stat, valor in planeta.beneficios.items():
+            if stat == "salud":
+                goku.salud += valor
+            elif stat == "poder_de_ataque":
+                goku.poder_de_ataque += valor
+            elif stat == "defensa":
+                goku.defensa += valor
+        
+        print(f"\n¡Goku ha completado los desafíos de {planeta_nombre}!")
+        print("Stats actuales de Goku:")
+        print(f"Salud: {goku.salud}")
+        print(f"Poder de ataque: {goku.poder_de_ataque}")
+        print(f"Defensa: {goku.defensa}")
+        
+        input("\nPresiona ENTER para continuar la aventura...")
+    
+    print("\n¡Felicidades! ¡Goku ha completado su aventura por los 5 planetas!")
+    print("Mejoras totales obtenidas:")
+    print(f"Salud: +{goku.salud - stats_originales['salud']}")
+    print(f"Poder de ataque: +{goku.poder_de_ataque - stats_originales['poder_de_ataque']}")
+    print(f"Defensa: +{goku.defensa - stats_originales['defensa']}")
+    return True
+
+
+# Crear personajes en orden de poder creciente
+personajes = [
+    Personaje("Raditz", salud=350, poder_de_ataque=50, defensa=30, ataque_energia=100),
+    Personaje("Androide 17", salud=500, poder_de_ataque=60, defensa=40, ataque_energia=120),
+    Personaje("Bardock (Super Saiyan)", salud=650, poder_de_ataque=75, defensa=50, ataque_energia=130),
+    Personaje("Vegeta (Super Saiyan 4)", salud=800, poder_de_ataque=90, defensa=60, ataque_energia=160),
+    Personaje("Goku (Super Saiyan 4)", salud=3000, poder_de_ataque=200, defensa=80, ataque_energia=200),
+    Personaje("Hit", salud=900, poder_de_ataque=100, defensa=70, ataque_energia=180),
+    Personaje("Majin Buu (Kid Buu)", salud=1200, poder_de_ataque=120, defensa=80, ataque_energia=200),
+    Personaje("Vegeta (Super Saiyan Blue Evolved)", salud=2000, poder_de_ataque=180, defensa=120, ataque_energia=300),
+    Personaje("Frieza (Golden Form)", salud=2200, poder_de_ataque=200, defensa=130, ataque_energia=320),
+    Personaje("Cell (Perfecto)", salud=2500, poder_de_ataque=220, defensa=150, ataque_energia=350),
+    Personaje("Gohan (Místico)", salud=2700, poder_de_ataque=240, defensa=160, ataque_energia=380),
+    Personaje("Trunks (Del Futuro)", salud=2800, poder_de_ataque=250, defensa=170, ataque_energia=400),
+    Personaje("Zeno Sama", salud=10000, poder_de_ataque=700, defensa=350, ataque_energia=900),
+    Personaje("Yamcha", salud=200, poder_de_ataque=30, defensa=20, ataque_energia=50),
+    Personaje("Maestro Roshi", salud=250, poder_de_ataque=40, defensa=25, ataque_energia=70),
+    Personaje("Krilin", salud=300, poder_de_ataque=45, defensa=30, ataque_energia=80),
+    Personaje("Piccolo", salud=500, poder_de_ataque=70, defensa=50, ataque_energia=100),
+    Personaje("Dodoria", salud=400, poder_de_ataque=60, defensa=40, ataque_energia=90),
+    Personaje("Freezer", salud=800, poder_de_ataque=100, defensa=70, ataque_energia=150),
+    Personaje("Majin Buu", salud=1200, poder_de_ataque=120, defensa=80, ataque_energia=200),
+    Personaje("Bills", salud=1500, poder_de_ataque=150, defensa=100, ataque_energia=250),
+    Personaje("Whis", salud=2000, poder_de_ataque=180, defensa=120, ataque_energia=300),
+    Personaje("Broly", salud=1000, poder_de_ataque=110, defensa=90, ataque_energia=180),
+    Personaje("Goku Black", salud=1300, poder_de_ataque=130, defensa=90, ataque_energia=220),
+    Personaje("Jiren", salud=2500, poder_de_ataque=250, defensa=180, ataque_energia=400),
+]
+
+# Ajustar dificultad de los personajes al inicio
+personajes = ajustar_dificultad_enemigos(personajes)
+
+if __name__ == "__main__":
+    print("¡Bienvenidos al Juego de Dragon Ball Z!\n")
+    print("1. Modo Torneo")
+    print("2. Modo Aventura (Goku)")
+    
+    while True:
+        try:
+            modo = int(input("Selecciona el modo de juego (1-2): "))
+            if modo in [1, 2]:
+                break
+            else:
+                print("Por favor, selecciona 1 o 2.")
+        except ValueError:
+            print("Por favor, ingresa un número válido.")
+    
+    if modo == 1:
+        while True:
+            try:
+                cantidad_participantes = int(input("Elige el número de participantes (4, 8 o 16): "))
+                if cantidad_participantes in [4, 8, 16]:
+                    torneo(personajes, cantidad_participantes)
+                    break
+                else:
+                    print("Por favor, elige 4, 8 o 16 participantes.")
+            except ValueError:
+                print("Por favor, ingresa un número válido.")
+    
+    elif modo == 2:
+        print("\n=== Modo Aventura con Goku ===")
+        print("1. Modo Ruta Óptima (usando Dijkstra)")
+        print("2. Modo Exploración Libre")
+        
+        while True:
+            try:
+                modo_ruta = int(input("Selecciona el tipo de aventura (1-2): "))
+                if modo_ruta in [1, 2]:
+                    # Encontrar a Goku en la lista de personajes
+                    goku = next(p for p in personajes if p.nombre == "Goku (Super Saiyan 4)")
+                    modo_aventura(goku, personajes, modo_ruta)
+                    break
+                else:
+                    print("Por favor, selecciona 1 o 2.")
+            except ValueError:
+                print("Por favor, ingresa un número válido.")
+                
