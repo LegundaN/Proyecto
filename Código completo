@@ -170,6 +170,53 @@ def batalla(personaje1, personaje2):
             return personaje2
         
         time.sleep(1)  # Pausa de 1 segundo entre turnos
+        
+class NodoTorneo:
+    def __init__(self, personaje=None):
+        self.personaje = personaje
+        self.izquierdo = None
+        self.derecho = None
+        self.ganador = None
+
+class ArbolTorneo:
+    def __init__(self, profundidad):
+        self.raiz = self._crear_arbol_vacio(profundidad)
+        self.nivel_actual = profundidad
+    
+    def _crear_arbol_vacio(self, profundidad):
+        if profundidad == 0:
+            return NodoTorneo()
+        nodo = NodoTorneo()
+        nodo.izquierdo = self._crear_arbol_vacio(profundidad - 1)
+        nodo.derecho = self._crear_arbol_vacio(profundidad - 1)
+        return nodo
+    
+    def _insertar_participantes(self, nodo, participantes, nivel):
+        if nivel == 0 and participantes:
+            nodo.personaje = participantes.pop(0)
+            return
+        if nodo.izquierdo:
+            self._insertar_participantes(nodo.izquierdo, participantes, nivel - 1)
+        if nodo.derecho:
+            self._insertar_participantes(nodo.derecho, participantes, nivel - 1)
+    
+    def insertar_participantes(self, participantes):
+        participantes_copy = participantes.copy()
+        for nivel in range(self.nivel_actual + 1):
+            self._insertar_participantes(self.raiz, participantes_copy, nivel)
+    
+    def actualizar_ganador(self, nodo, ganador):
+        if not nodo:
+            return False
+        if nodo.personaje == ganador:
+            nodo.ganador = ganador
+            return True
+        if (nodo.izquierdo and nodo.izquierdo.personaje == ganador) or \
+        (nodo.derecho and nodo.derecho.personaje == ganador):
+            nodo.ganador = ganador
+            return True
+        return self.actualizar_ganador(nodo.izquierdo, ganador) or \
+            self.actualizar_ganador(nodo.derecho, ganador)
 
 def torneo(personajes, cantidad):
     # Selección de la manera de elegir los participantes
@@ -198,30 +245,88 @@ def torneo(personajes, cantidad):
                 print(f"{personajes[seleccion-1].nombre} ha sido seleccionado.")
             else:
                 print("Selección no válida o personaje ya seleccionado.")
-    
+
+    # Determinar la profundidad del árbol basado en la cantidad de participantes
+    if cantidad == 4:
+        profundidad = 2
+        rondas = ["Semifinales", "Final"]
+    elif cantidad == 8:
+        profundidad = 3
+        rondas = ["Cuartos de Final", "Semifinales", "Final"]
+    else:  # cantidad == 16
+        profundidad = 4
+        rondas = ["Octavos de Final", "Cuartos de Final", "Semifinales", "Final"]
+
+    # Crear el árbol del torneo
+    arbol_torneo = ArbolTorneo(profundidad)
+    arbol_torneo.insertar_participantes(jugadores)
+
+    def ejecutar_ronda(nodos, nivel_actual):
+        if not nodos:
+            return []
+        
+        ganadores = []
+        print(f"\n=== {rondas[nivel_actual]} ===")
+        
+        # Procesar los nodos en pares
+        for i in range(0, len(nodos), 2):
+            if i + 1 < len(nodos):  # Asegurarse de que hay un oponente
+                nodo1, nodo2 = nodos[i], nodos[i + 1]
+                if nodo1.personaje and nodo2.personaje:
+                    print(f"\nCombate {(i//2) + 1}: {nodo1.personaje.nombre} vs {nodo2.personaje.nombre}")
+                    print(f"\nEstadísticas de los combatientes:")
+                    print(f"{nodo1.personaje.nombre}:")
+                    print(f"Salud: {nodo1.personaje.salud}")
+                    print(f"Poder de ataque: {nodo1.personaje.poder_de_ataque}")
+                    print(f"Defensa: {nodo1.personaje.defensa}")
+                    print(f"\n{nodo2.personaje.nombre}:")
+                    print(f"Salud: {nodo2.personaje.salud}")
+                    print(f"Poder de ataque: {nodo2.personaje.poder_de_ataque}")
+                    print(f"Defensa: {nodo2.personaje.defensa}")
+                    
+                    input("\nPresiona ENTER para comenzar el combate...")
+                    
+                    ganador = batalla(nodo1.personaje, nodo2.personaje)
+                    nodo1.ganador = ganador
+                    nodo2.ganador = ganador
+                    
+                    if ganador == nodo1.personaje:
+                        ganadores.append(nodo1)
+                    else:
+                        ganadores.append(nodo2)
+                    
+                    print(f"\n{ganador.nombre} avanza a la siguiente ronda!")
+                    input("\nPresiona ENTER para continuar...")
+
+        return ganadores
+
+    def obtener_nodos_nivel(nodo, nivel, nivel_actual=0):
+        if not nodo:
+            return []
+        if nivel_actual == nivel:
+            return [nodo]
+        return obtener_nodos_nivel(nodo.izquierdo, nivel, nivel_actual + 1) + \
+            obtener_nodos_nivel(nodo.derecho, nivel, nivel_actual + 1)
+
     print(f"\n¡El torneo comienza con {cantidad} participantes!")
     
-    # Rondas del torneo
-    while len(jugadores) > 1:
-        print("\nRonda de batalla:")
-        jugador1 = jugadores.pop(0)
-        jugador2 = jugadores.pop(0)
+    # Ejecutar el torneo nivel por nivel
+    for nivel in range(profundidad):
+        nodos_nivel = obtener_nodos_nivel(arbol_torneo.raiz, profundidad - nivel - 1)
+        nodos_nivel = [n for n in nodos_nivel if n.personaje]  # Solo nodos con personajes
+        ganadores = ejecutar_ronda(nodos_nivel, nivel)
         
-        print(f"¡{jugador1.nombre} vs {jugador2.nombre}!")
-        
-        # Esperar a que el jugador inicie la pelea
-        input("Presiona ENTER para iniciar la pelea...")
-        
-        ganador = batalla(jugador1, jugador2)
-        
-        print(f"{ganador.nombre} pasa a la siguiente ronda.\n")
-        jugadores.append(ganador)  # El ganador sigue en el torneo
-        
-        # Pausa entre rondas
-        input("Presiona ENTER para comenzar la siguiente pelea...")
-        
-    # El ganador final
-    print(f"¡El ganador del torneo es {jugadores[0].nombre}!")
+        # Actualizar los nodos padre con los ganadores
+        for i, ganador in enumerate(ganadores):
+            padre_idx = i // 2
+            if padre_idx < len(nodos_nivel) // 2:
+                padre = nodos_nivel[padre_idx]
+                if i % 2 == 0:
+                    padre.izquierdo = ganador
+                else:
+                    padre.derecho = ganador
+
+    print(f"\n¡El torneo ha terminado! ¡{arbol_torneo.raiz.ganador.nombre} es el campeón!")
 
 
 def modo_aventura(goku, personajes, modo_ruta):
