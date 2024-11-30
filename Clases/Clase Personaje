@@ -1,0 +1,10 @@
+# Definimos la clase Personaje
+class Personaje:
+    def __init__(self, nombre, salud, poder_de_ataque, defensa, ataque_energia):
+        self.nombre = nombre
+        self.salud = salud
+        self.poder_de_ataque = poder_de_ataque
+        self.defensa = defensa
+        self.turno_defensa = False
+        self.puede_evolucionar = True
+        self.ataque_energia = ataque_energia
